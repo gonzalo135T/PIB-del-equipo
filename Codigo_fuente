@@ -1,0 +1,204 @@
+import pygame
+import sys
+
+# Inicializar Pygame
+pygame.init()
+
+# Configurar la pantalla
+WIDTH, HEIGHT = 800, 600
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Juego de Plataforma")
+
+# Reloj para controlar FPS
+clock = pygame.time.Clock()
+
+# Colores
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+BLUE = (0, 0, 255)
+
+# Gravedad y Velocidad del Jugador
+GRAVITY = 1
+player_speed = 5
+jump_strength = 15
+
+# Dimensiones del mundo
+WORLD_WIDTH = 1600  # El mundo es más grande que la pantalla
+WORLD_HEIGHT = 1200
+
+# Cámara (posición inicial)
+camera_x = 0
+camera_y = 0
+
+# Cargar el fondo
+background = pygame.image.load('C:\\Users\Mariana\Downloads\Fondo desolado.jpeg').convert()
+
+# Fuentes para el texto
+font = pygame.font.Font(None, 74)
+small_font = pygame.font.Font(None, 36)
+
+# Estados del juego
+MENU = "menu"
+GAME = "game"
+state = MENU  # Empezar en el menú
+
+
+# Clase para el Jugador
+class Player(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        # Cargar imagen del jugador
+        self.image = pygame.image.load('C:\\Users\mariana\Downloads\Personaje 2.JPEG').convert_alpha()
+        self.rect = self.image.get_rect()
+        self.rect.x = 100
+        self.rect.y = WORLD_HEIGHT - self.rect.height - 50
+        self.velocity_y = 0
+        self.on_ground = False
+
+    def update(self):
+        self.velocity_y += GRAVITY
+        self.rect.y += self.velocity_y
+
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT]:
+            self.rect.x -= player_speed
+        if keys[pygame.K_RIGHT]:
+            self.rect.x += player_speed
+
+        # Limitar movimiento del jugador a los límites del mundo
+        if self.rect.left < 0:
+            self.rect.left = 0
+        if self.rect.right > WORLD_WIDTH:
+            self.rect.right = WORLD_WIDTH
+
+    def jump(self):
+        if self.on_ground:
+            self.velocity_y = -jump_strength
+            self.on_ground = False
+
+
+# Clase para las Plataformas
+class Platform(pygame.sprite.Sprite):
+    def __init__(self, x, y, width, height):
+        super().__init__()
+        self.image = pygame.Surface((width, height))
+        self.image.fill(WHITE)  # Mantener las plataformas con color blanco
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
+
+# Crear jugador y plataformas
+player = Player()
+
+# Mantener las plataformas como superficies con color sólido
+# Mantener las plataformas como superficies con color sólido
+platforms = pygame.sprite.Group()
+platforms.add(Platform(0, WORLD_HEIGHT - 40, WORLD_WIDTH, 40))  # Suelo
+platforms.add(Platform(520, 1050, 200, 30)) #<-- mientras mas grande se X mas a la derecha ira y mientras mas grande sea Y mas bajo estara, y viceversa, mientras mas bajo sea X mas a la izquierda estara y mientras mas bajo este Y mas arriba ira
+platforms.add(Platform(770, 950, 200, 20))
+platforms.add(Platform(1400, 1030, 200, 20))
+platforms.add(Platform(1080, 1100, 200, 20))
+
+# Grupo de sprites
+all_sprites = pygame.sprite.Group()
+all_sprites.add(player)
+all_sprites.add(*platforms)
+
+
+# Función para mostrar el menú de inicio
+def show_menu():
+    screen.fill(BLACK)
+
+    # Título del juego
+    title_text = font.render("Juego de Plataforma", True, WHITE)
+    screen.blit(title_text, (WIDTH // 2 - title_text.get_width() // 2, 100))
+
+    # Botón "Jugar"
+    play_text = small_font.render("Jugar", True, WHITE)
+    play_button = pygame.Rect(WIDTH // 2 - 100, 300, 200, 50)
+    pygame.draw.rect(screen, BLUE, play_button)
+    screen.blit(play_text, (play_button.x + 60, play_button.y + 10))
+
+    # Botón "Salir"
+    exit_text = small_font.render("Salir", True, WHITE)
+    exit_button = pygame.Rect(WIDTH // 2 - 100, 400, 200, 50)
+    pygame.draw.rect(screen, BLUE, exit_button)
+    screen.blit(exit_text, (exit_button.x + 60, exit_button.y + 10))
+
+    return play_button, exit_button
+
+
+# Bucle principal del juego
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+        if state == MENU:
+            # Detectar clic en los botones del menú
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = event.pos
+                play_button, exit_button = show_menu()
+                if play_button.collidepoint(mouse_pos):
+                    state = GAME  # Cambiar al estado de juego
+                if exit_button.collidepoint(mouse_pos):
+                    running = False
+
+        elif state == GAME:      #<-- no mover o modificar sin conocimiento, bucle pricipal del menu esto es lo que permite al menu funcionar
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    player.jump()
+
+    if state == MENU:
+        # Mostrar el menú
+        play_button, exit_button = show_menu()
+
+    elif state == GAME:
+
+        # Actualizar posición del jugador
+        player.update()
+
+        # Detectar colisiones con plataformas
+        player.on_ground = False
+        hits = pygame.sprite.spritecollide(player, platforms, False)
+        if hits:
+            player.velocity_y = 0
+            player.rect.bottom = hits[0].rect.top
+            player.on_ground = True
+
+        # Ajustar la posición de la cámara para seguir al jugador
+        camera_x = player.rect.centerx - WIDTH // 2
+        camera_y = player.rect.centery - HEIGHT // 2
+
+        # Restringir la cámara dentro de los límites del mundo
+        camera_x = max(0, min(camera_x, WORLD_WIDTH - WIDTH))
+        camera_y = max(0, min(camera_y, WORLD_HEIGHT - HEIGHT))
+
+        # Dibujar el fondo con desplazamiento
+        screen.blit(background, (-camera_x, -camera_y))
+
+        # Dibujar todos los sprites con ajuste de cámara
+        for sprite in all_sprites:
+            screen.blit(sprite.image, (sprite.rect.x - camera_x, sprite.rect.y - camera_y))
+
+    # Actualizar la pantalla
+    pygame.display.flip()
+
+    # Controlar FPS
+    clock.tick(60)
+
+pygame.quit()
+sys.exit()
+
+
+
+#background = pygame.image.load('C:\\Users\[Su Usuario]\[Direccion de donde esta el Sprite]\ Nombre del archivo') 
+#character_sprite = pygame.image.load('C:\\Users\[Su Usuario]\[Direccion de donde esta el Sprite]\Nombre del archivo')
+
+#ejemplos
+
+#background = pygame.image.load('C:\\Users\Mariana\Downloads\Fondo desolado.JPEG')
+#self.image = pygame.image.load('C:\\Users\mariana\Downloads\Personaje 2.JPEG')
