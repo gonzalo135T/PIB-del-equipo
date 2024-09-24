@@ -1,0 +1,75 @@
+import pygame
+import sys
+
+# Inicializar Pygame
+pygame.init()
+
+# Dimensiones de la ventana
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+
+# Colores
+WHITE = (255, 255, 255)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+BLACK = (0, 0, 0)
+
+# Crear la ventana del juego
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("Barra de Vida en Pygame")
+
+# Configuración de la barra de vida
+max_health = 100  # Vida máxima del jugador
+current_health = max_health  # Vida actual del jugador
+bar_width = 200  # Ancho de la barra de vida
+bar_height = 20  # Alto de la barra de vida
+bar_position = (50, 50)  # Posición de la barra en la pantalla
+
+# Reloj para controlar los FPS
+clock = pygame.time.Clock()
+
+# Función para dibujar la barra de vida
+def draw_health_bar(screen, x, y, current_health, max_health, bar_width, bar_height):
+    # Calcular el porcentaje de vida restante
+    health_percentage = current_health / max_health
+
+    # Dibujar el fondo de la barra de vida (vacía)
+    pygame.draw.rect(screen, RED, (x, y, bar_width, bar_height))
+
+    # Dibujar la parte de la barra que representa la vida actual
+    pygame.draw.rect(screen, GREEN, (x, y, bar_width * health_percentage, bar_height))
+
+# Bucle principal del juego
+running = True
+while running:
+    # Manejar eventos
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+        # Simulación de daño y curación (usar teclas para modificar la vida)
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_DOWN:  # Quitar vida al presionar la tecla abajo
+                current_health -= 10
+                if current_health < 0:
+                    current_health = 0
+            if event.key == pygame.K_UP:  # Aumentar vida al presionar la tecla arriba
+                current_health += 10
+                if current_health > max_health:
+                    current_health = max_health
+
+    # Rellenar el fondo de la pantalla
+    screen.fill(WHITE)
+
+    # Dibujar la barra de vida
+    draw_health_bar(screen, bar_position[0], bar_position[1], current_health, max_health, bar_width, bar_height)
+
+    # Actualizar la pantalla
+    pygame.display.flip()
+
+    # Controlar los FPS
+    clock.tick(60)
+
+# Salir de Pygame
+pygame.quit()
+sys.exit()
